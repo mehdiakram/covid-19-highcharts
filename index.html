@@ -1,0 +1,100 @@
+
+<head>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/data.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/export-data.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+
+<script>
+
+function parseData(data) {
+  var a = new Array();
+  for (var k in data) {
+    a.push([Date.parse(data[k].Date), data[k].Cases]);
+  }
+  return a;
+}
+
+var opt = {
+  chart: {
+      type: 'area',
+      zoomType: 'x'
+  },
+  title: {
+      text: 'France'
+  },
+  subtitle: {
+      text: document.ontouchstart === undefined ?
+          'Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in'
+  },
+  xAxis: {
+      type: 'datetime'
+  },
+  yAxis: {
+      title: {
+          text: '#'
+      }
+  },
+  legend: {
+      enabled: false
+  },
+  plotOptions: {
+      area: {
+          fillColor: {
+              linearGradient: {
+                  x1: 0,
+                  y1: 0,
+                  x2: 0,
+                  y2: 1
+              },
+              stops: [
+                  [0, Highcharts.getOptions().colors[0]],
+                  [1, Highcharts.color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+              ]
+          },
+          marker: {
+              radius: 2
+          },
+          lineWidth: 1,
+          states: {
+              hover: {
+                  lineWidth: 1
+              }
+          },
+          threshold: null
+      }
+  }
+};
+
+document.addEventListener('DOMContentLoaded', function(event) {
+  chart = Highcharts.chart('container', opt);
+
+  ['confirmed', 'deaths', 'recovered'].forEach(function(item, index, array) {
+
+    Highcharts.getJSON(
+        'https://api.covid19api.com/total/country/france/status/'+item,
+        function (data) {
+            chart.addSeries({
+              type: 'area',
+              name: item,
+              data: parseData(data)
+            });
+        }
+    );
+
+  });
+
+})
+
+
+</script>
+</head>
+
+<body>
+<figure class="highcharts-figure">
+    <div id="container"></div>
+    <p class="highcharts-description">
+    </p>
+</figure>
+</body>
