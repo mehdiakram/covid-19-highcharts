@@ -1,5 +1,7 @@
 
 <head>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <script src="https://code.highcharts.com/modules/data.js"></script>
 <script src="https://code.highcharts.com/modules/exporting.js"></script>
@@ -8,93 +10,215 @@
 
 <script>
 
-function parseData(data) {
+var api = 'https://api.covid19api.com';
+var country = 'france';
+
+var xhr = new XMLHttpRequest();
+xhr.open('GET', api+'/countries');
+xhr.onreadystatechange = function(){
+  if (xhr.readyState === 4) {
+    var html_opt = '';
+    var data = JSON.parse(xhr.responseText);
+    data.forEach(function(item, index, array) {
+      html_opt += '<option value="'+item.Slug+'">'+item.Country+'</option>'
+    });
+    //document.getElementById('countries').innerHTML = html_opt;
+  }
+};
+xhr.send();
+
+function getData(type, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', api+'/total/country/'+country+'/status/'+type);
+  xhr.onreadystatechange = function(){
+    if (xhr.readyState === 4) {
+      var count = new Array();
+      var diff = new Array();
+      var data = JSON.parse(xhr.responseText);
+
+      data.forEach(function(item, index, array) {
+        count.push([
+          Date.parse(item.Date),
+          item.Cases
+         ]);
+
+        if (index > 0) {
+          diff.push([
+            Date.parse(item.Date),
+            item.Cases-data[index-1].Cases
+          ]);
+        }
+      });
+      callback(count, diff);
+    }
+  }
+  xhr.send();
+}
+
+function parseData(type, data) {
   var a = new Array();
   for (var k in data) {
     a.push([Date.parse(data[k].Date), data[k].Cases]);
+    stats[type].push([Date.parse(data[k].Date), data[k].Cases]);
+  }
+  return a;
+}
+
+function calculDeathPercent (confirmed, deaths) {
+  var a = new Array();
+  for (var i in confirmed) {
+    a.push([confirmed[i][0], deaths[i][1]/confirmed[i][1]*100]);
   }
   return a;
 }
 
 var opt = {
   chart: {
-      type: 'area',
-      zoomType: 'x'
-  },
-  title: {
-      text: 'France'
+    zoomType: 'x',
+    animation: {
+      duration: 300
+    }
   },
   subtitle: {
-      text: document.ontouchstart === undefined ?
-          'Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in'
+    text: ''
   },
   xAxis: {
-      type: 'datetime'
+    type: 'datetime'
   },
   yAxis: {
-      title: {
-          text: '#'
-      }
+    title: {
+      text: ''
+    }
   },
   legend: {
-      enabled: false
+    enabled: true
   },
   plotOptions: {
-      area: {
-          fillColor: {
-              linearGradient: {
-                  x1: 0,
-                  y1: 0,
-                  x2: 0,
-                  y2: 1
-              },
-              stops: [
-                  [0, Highcharts.getOptions().colors[0]],
-                  [1, Highcharts.color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
-              ]
-          },
-          marker: {
-              radius: 2
-          },
-          lineWidth: 1,
-          states: {
-              hover: {
-                  lineWidth: 1
-              }
-          },
-          threshold: null
-      }
+    area: {
+      marker: {
+        radius: 2
+      },
+      lineWidth: 1,
+      states: {
+        hover: {
+          lineWidth: 1
+        }
+      },
+      threshold: null
+    }
   }
 };
 
+var config = {
+  'confirmed': {
+    'color': '#52c5fa'
+  },
+  'deaths': {
+    'color': '#fa5271'
+  },
+  'recovered': {
+    'color': '#52fa5a'
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function(event) {
-  chart = Highcharts.chart('container', opt);
+
 
   ['confirmed', 'deaths', 'recovered'].forEach(function(item, index, array) {
 
-    Highcharts.getJSON(
-        'https://api.covid19api.com/total/country/france/status/'+item,
-        function (data) {
-            chart.addSeries({
-              type: 'area',
-              name: item,
-              data: parseData(data)
-            });
-        }
-    );
+    var chart = Highcharts.chart('chart-'+item, opt);
+    var chartDiff = Highcharts.chart('chart-'+item+'-diff', opt);
+
+    chart.setTitle({
+      text: '# '+item
+    });
+
+    chartDiff.setTitle({
+      text: 'Diff '+item
+    });
+
+    getData(item, function(count, diff) {
+
+      chart.addSeries({
+        type: 'area',
+        name: item,
+        color: config[item]['color'],
+        data: count
+      });
+
+      chartDiff.addSeries({
+        type: 'area',
+        name: item,
+        color: config[item]['color'],
+        data: diff
+      });
+
+    });
+
+    //chart.addEvent(
 
   });
 
-})
+});
 
 
 </script>
 </head>
 
 <body>
+
+<h2 class="text-center">France</h2>
+
+<div class="row">
+<div class="col-4">
 <figure class="highcharts-figure">
-    <div id="container"></div>
+    <div id="chart-confirmed"></div>
     <p class="highcharts-description">
     </p>
 </figure>
+</div>
+
+<div class="col-4">
+<figure class="highcharts-figure">
+    <div id="chart-deaths"></div>
+    <p class="highcharts-description">
+    </p>
+</figure>
+</div>
+
+<div class="col-4">
+<figure class="highcharts-figure">
+    <div id="chart-recovered"></div>
+    <p class="highcharts-description">
+    </p>
+</figure>
+</div>
+</div>
+
+<div class="row">
+<div class="col-4">
+<figure class="highcharts-figure">
+    <div id="chart-confirmed-diff"></div>
+    <p class="highcharts-description">
+    </p>
+</figure>
+</div>
+
+<div class="col-4">
+<figure class="highcharts-figure">
+    <div id="chart-deaths-diff"></div>
+    <p class="highcharts-description">
+    </p>
+</figure>
+</div>
+
+<div class="col-4">
+<figure class="highcharts-figure">
+    <div id="chart-recovered-diff"></div>
+    <p class="highcharts-description">
+    </p>
+</figure>
+</div>
+</div>
+
 </body>
