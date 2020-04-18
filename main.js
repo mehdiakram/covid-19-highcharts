@@ -1,5 +1,5 @@
 var api = 'https://api.covid19api.com';
-var country = 'france';
+var country = 'bangladesh';
 
 var xhr = new XMLHttpRequest();
 xhr.open('GET', api+'/countries');
